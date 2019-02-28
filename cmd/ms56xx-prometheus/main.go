@@ -48,10 +48,12 @@ func takeReading(device *ms561101ba.BaroSensor, prom ms561101ba.PROMData) {
 	d1, err := device.ReadPressureADC(4096)
 	if err != nil {
 		log.Printf("error while reading pressure ADC value: %s", err.Error())
+		return
 	}
 	d2, err := device.ReadTemperatureADC(4096)
 	if err != nil {
 		log.Printf("error while reading temperature ADC value: %s", err.Error())
+		return
 	}
 	t, p := ms561101ba.CalcTemp(d2, prom), ms561101ba.CalcPressure(d1, d2, prom)
 	log.Printf("T=%.2f degC P=%.2f hPa", t, p)

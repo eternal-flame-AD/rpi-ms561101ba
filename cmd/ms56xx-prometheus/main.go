@@ -44,16 +44,16 @@ func init() {
 	metricAddr = *m
 }
 
-func takeReading(device *ms561101ba.BaroSensor, prom ms561101ba.PROMData) {
+func takeReading(device *ms561101ba.BaroSensor, prom ms561101ba.PROMData) error {
 	d1, err := device.ReadPressureADC(4096)
 	if err != nil {
 		log.Printf("error while reading pressure ADC value: %s", err.Error())
-		return
+		return err
 	}
 	d2, err := device.ReadTemperatureADC(4096)
 	if err != nil {
 		log.Printf("error while reading temperature ADC value: %s", err.Error())
-		return
+		return err
 	}
 	t, p := ms561101ba.CalcTemp(d2, prom), ms561101ba.CalcPressure(d1, d2, prom)
 	log.Printf("T=%.2f degC P=%.2f hPa", t, p)
@@ -66,24 +66,41 @@ func takeReading(device *ms561101ba.BaroSensor, prom ms561101ba.PROMData) {
 		Timestamp:   now.Unix() * 1000,
 		Prefix:      prefix,
 	}
+	return nil
 }
 
-func main() {
+func connect() (*ms561101ba.BaroSensor, error) {
 	handle, err := ms561101ba.Open(0x77)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	handle.Reset()
 	time.Sleep(100 * time.Millisecond)
+	return handle, nil
+}
+
+func main() {
+	handle, err := connect()
+	if err != nil {
+		panic(err)
+	}
+
 	prom, err := handle.ReadPROM()
 	if err != nil {
 		panic(err)
 	}
 
-	takeReading(handle, prom)
+	if err := takeReading(handle, prom); err != nil {
+		panic(err)
+	}
 	go func() {
 		for range time.NewTicker(1 * time.Second).C {
-			takeReading(handle, prom)
+			if err := takeReading(handle, prom); err != nil {
+				handle, err = connect()
+				if err != nil {
+					log.Println(err)
+				}
+			}
 		}
 	}()
 

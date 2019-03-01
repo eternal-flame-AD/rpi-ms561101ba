@@ -40,6 +40,12 @@ func Open(addr uint8) (*BaroSensor, error) {
 	return &BaroSensor{fd}, nil
 }
 
+// Close closed the file descriptor to the sensor
+func (c *BaroSensor) Close() error {
+	f := os.NewFile(uintptr(c.fd), "baro")
+	return f.Close()
+}
+
 // ReadPROM reads the sensor PROM data for calibration constants
 func (c *BaroSensor) ReadPROM() (PROMData, error) {
 	var res PROMData
